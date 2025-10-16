@@ -1,0 +1,1 @@
+import sys; import os; exec("if not os.environ.get('PYPRE_SKIP'): import pypreprocessor.codec")
