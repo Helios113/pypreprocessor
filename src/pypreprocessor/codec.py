@@ -1,3 +1,4 @@
+# codec.py
 import codecs
 import encodings
 from encodings import utf_8
@@ -11,26 +12,35 @@ class CodecError(Exception): ...
 class Decoder(codecs.BufferedIncrementalDecoder):
     def _buffer_decode(self, input, errors, final):
         """not used"""
-
-    @staticmethod
-    def do_decode(data: bytes, errors="strict") -> tuple[str, int]:
-        decoded, consumed = codecs.utf_8_decode(data, errors, True)
-        try:
-            processed = preprocess(decoded)
-        except Exception:
-            traceback.print_exc()
-            raise
-        return processed, consumed
+        pass
 
     def decode(self, data, final=False) -> str:
+        """Instance method that processes the buffered data"""
         self.buffer += data
-
         if self.buffer and final:
             buffer = self.buffer
             self.reset()
-            return self.do_decode(buffer, self.errors)[0]
-
+            # Decode UTF-8 first
+            decoded, consumed = codecs.utf_8_decode(buffer, self.errors, True)
+            try:
+                # Apply preprocessing
+                processed = preprocess(decoded)
+            except Exception:
+                traceback.print_exc()
+                raise
+            return processed
         return ""
+
+
+def decode_function(data: bytes, errors="strict") -> tuple[str, int]:
+    """Standalone decode function for the codec"""
+    decoded, consumed = codecs.utf_8_decode(data, errors, True)
+    try:
+        processed = preprocess(decoded)
+    except Exception:
+        traceback.print_exc()
+        raise
+    return processed, consumed
 
 
 def search_function(encoding):
@@ -41,12 +51,11 @@ def search_function(encoding):
     # Get the UTF-8 codec info
     utf8 = encodings.search_function("utf-8")
 
-    # Return a CodecInfo object with our custom decoder
     try:
         return codecs.CodecInfo(
             name="pypreprocessor",
             encode=utf8.encode,
-            decode=Decoder.decode,
+            decode=decode_function,  # Use the standalone function
             incrementalencoder=utf8.incrementalencoder,
             incrementaldecoder=Decoder,
         )
